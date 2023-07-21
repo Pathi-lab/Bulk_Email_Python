@@ -5,8 +5,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Email configuration
-sender_email = 'anangsunny@gmail.com'
-sender_password = 'Penhorse#3'  # Replace with your Gmail password
+sender_email = 'abe@gmail.com'
+sender_password = 'Password#3'  # Replace with your Gmail password
 email_subject = 'Your Subject Here'
 email_template = '''
 Dear {name},
