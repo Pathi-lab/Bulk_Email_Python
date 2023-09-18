@@ -1,0 +1,51 @@
+---
+- name: Execute CR Minion Script and Push to Different GitHub Repo
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Clone GitHub Repository
+      ansible.builtin.git:
+        repo: https://github.com/yourusername/yourrepository.git
+        dest: "{{ tower_temp_directory }}/source_directory"  # Use Ansible Tower temp directory
+        version: Dev
+
+    - name: Run Python Script
+      command: python3 "{{ tower_temp_directory }}/source_directory/cr.py"
+      environment:
+        CR_NUMBER: "{{ tower_variable_for_cr }}"
+      register: script_output
+
+    - name: Debug Script Output
+      debug:
+        var: script_output.stdout_lines
+
+    - name: Create YAML Configuration File
+      ansible.builtin.blockinfile:
+        path: "{{ tower_temp_directory }}/source_directory/{{ tower_variable_for_cr }}.yml"
+        create: yes
+        block: |
+          Site_id: "{{ script_output.stdout_lines[0] }}"
+
+    - name: Commit Changes to Local Git Repository (Source)
+      ansible.builtin.command: git add . && git commit -m "Add {{ tower_variable_for_cr }}.yml"
+      args:
+        chdir: "{{ tower_temp_directory }}/source_directory"
+
+    - name: Clone Different GitHub Repository
+      ansible.builtin.git:
+        repo: https://github.com/yourusername/differentrepository.git
+        dest: "{{ tower_temp_directory }}/destination_directory"  # Use Ansible Tower temp directory
+        accept_hostkey: yes
+
+    - name: Copy YAML Configuration File to Destination
+      ansible.builtin.copy:
+        src: "{{ tower_temp_directory }}/source_directory/{{ tower_variable_for_cr }}.yml"
+        dest: "{{ tower_temp_directory }}/destination_directory/{{ tower_variable_for_cr }}.yml"
+
+    - name: Commit and Push Changes to GitHub Dev Branch (Destination)
+      ansible.builtin.shell: |
+        cd "{{ tower_temp_directory }}/destination_directory"
+        git add .
+        git commit -m "Add {{ tower_variable_for_cr }}.yml"
+        git push origin Dev
